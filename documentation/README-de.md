@@ -4,7 +4,7 @@ Wine ist ein Programm, das es ermöglicht, Programme, die für Microsoft
 Windows geschrieben wurden (inklusive DOS-, Windows 3.x-, Win32- und
 Win64-Binärdateien), unter Unix auszuführen. Es besteht aus einem Programm-
 Lader, der Microsoft-Windows-Binärdateien lädt und ausführt, sowie
-einer Programmbibliothek (Winelib genannt), die Aufrufe der Windows API unter
+einer Programmbibliothek (Winelib genannt) die Aufrufe der Windows API unter
 Verwendung der entsprechenden Unix- oder X11-Gegenstücke implementiert.
 Winelib kann auch benutzt werden, um Windows-Code nativ nach Unix
 zu portieren.
