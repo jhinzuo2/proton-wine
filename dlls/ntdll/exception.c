@@ -249,6 +249,40 @@ NTSTATUS WINAPI dispatch_exception( EXCEPTION_RECORD *rec, CONTEXT *context )
         break;
 
     case STATUS_ASSERTION_FAILURE:
+        {
+            /* DEBUG: find out who keeps raising STATUS_ASSERTION_FAILURE.
+             * Prints the first few hits plus every 20000th, always (MESSAGE
+             * ignores WINEDEBUG), with the raise address and a stack trace. */
+            static LONG assert_hits;
+            LONG hit = InterlockedIncrement( &assert_hits );
+
+            if (hit <= 5 || !(hit % 20000))
+            {
+                struct debugstr_pc_args dbg_params;
+                char dbg_buffer[256];
+                void *frames[24];
+                USHORT dbg_count, dbg_i;
+
+                dbg_params.buffer = dbg_buffer;
+                dbg_params.size = sizeof(dbg_buffer);
+                dbg_params.pc = rec->ExceptionAddress;
+                if (WINE_UNIX_CALL( unix_debugstr_pc, &dbg_params )) dbg_buffer[0] = 0;
+                MESSAGE( "ASSERTDBG: hit #%ld tid=%04lx flags=%lx addr=%p (%s) nparams=%lu\n",
+                         (long)hit, HandleToULong( NtCurrentTeb()->ClientId.UniqueThread ),
+                         rec->ExceptionFlags, rec->ExceptionAddress, dbg_buffer,
+                         (unsigned long)rec->NumberParameters );
+                for (dbg_i = 0; dbg_i < min( EXCEPTION_MAXIMUM_PARAMETERS, rec->NumberParameters ); dbg_i++)
+                    MESSAGE( "ASSERTDBG:   info[%u]=%p\n", dbg_i, (void *)rec->ExceptionInformation[dbg_i] );
+
+                dbg_count = RtlCaptureStackBackTrace( 0, ARRAY_SIZE(frames), frames, NULL );
+                for (dbg_i = 0; dbg_i < dbg_count; dbg_i++)
+                {
+                    dbg_params.pc = frames[dbg_i];
+                    if (WINE_UNIX_CALL( unix_debugstr_pc, &dbg_params )) dbg_buffer[0] = 0;
+                    MESSAGE( "ASSERTDBG:   #%02u %p %s\n", dbg_i, frames[dbg_i], dbg_buffer );
+                }
+            }
+        }
         ERR( "assertion failure exception\n" );
         break;
 
