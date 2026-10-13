@@ -298,6 +298,20 @@ NTSTATUS WINAPI dispatch_exception( EXCEPTION_RECORD *rec, CONTEXT *context )
                     if (WINE_UNIX_CALL( unix_debugstr_pc, &dbg_params )) dbg_buffer[0] = 0;
                     MESSAGE( "ASSERTDBG:   #%02u %p %s\n", dbg_i, frames[dbg_i], dbg_buffer );
                 }
+#ifdef __aarch64__
+                {
+                    /* DEBUG: dump live register state and the decoded code around the trap */
+                    const ULONG *code = (const ULONG *)rec->ExceptionAddress;
+                    int r;
+                    for (r = 0; r <= 15; r++)
+                        MESSAGE( "ASSERTDBG:   X%d=%016llx\n", r, (unsigned long long)context->X[r] );
+                    MESSAGE( "ASSERTDBG:   Fp=%016llx Lr=%016llx Sp=%016llx Pc=%016llx\n",
+                             (unsigned long long)context->Fp, (unsigned long long)context->Lr,
+                             (unsigned long long)context->Sp, (unsigned long long)context->Pc );
+                    for (r = -40; r <= 8; r++)
+                        MESSAGE( "ASSERTDBG:   code[%+d] %p: %08lx\n", r, code + r, (unsigned long)code[r] );
+                }
+#endif
                 ERR( "assertion failure exception\n" );
             }
         }
