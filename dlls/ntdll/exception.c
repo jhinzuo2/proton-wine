@@ -327,6 +327,23 @@ NTSTATUS WINAPI dispatch_exception( EXCEPTION_RECORD *rec, CONTEXT *context )
                         MESSAGE( "ASSERTDBG:   sp[%03x]=%016llx\n", k * 8, sp_mem[k] );
                 }
 #endif
+#ifdef __aarch64__
+                {
+                    /* DEBUG: sampling test. Caller reads cntvct_el0 into x10 and the trap fn does not write x10. */
+                    const ULONG *lr_after = (const ULONG *)context->Lr;
+                    const ULONG *br_code = (const ULONG *)(context->Lr + 0x1600); /* 0x1401FC7D0 - 0x1401FB1D0 */
+                    unsigned long long cnt = context->X[10];
+                    int k;
+                    MESSAGE( "ASSERTDBG:   cntvct X10=%016llx mod100=%llu sampled=%d\n",
+                             cnt, cnt % 100, (int)((cnt % 100) < 5) );
+                    MESSAGE( "ASSERTDBG:   X8=%016llx X9=%016llx (clobbered by trap fn, informational)\n",
+                             (unsigned long long)context->X[8], (unsigned long long)context->X[9] );
+                    for (k = 8; k <= 80; k++)
+                        MESSAGE( "ASSERTDBG:   lr[%+d] %p: %08lx\n", k, lr_after + k, (unsigned long)lr_after[k] );
+                    for (k = -8; k <= 24; k++)
+                        MESSAGE( "ASSERTDBG:   br[%+d] %p: %08lx\n", k, br_code + k, (unsigned long)br_code[k] );
+                }
+#endif
                 ERR( "assertion failure exception\n" );
             }
         }
