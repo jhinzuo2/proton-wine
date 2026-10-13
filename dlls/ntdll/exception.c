@@ -250,13 +250,30 @@ NTSTATUS WINAPI dispatch_exception( EXCEPTION_RECORD *rec, CONTEXT *context )
 
     case STATUS_ASSERTION_FAILURE:
         {
-            /* DEBUG: find out who keeps raising STATUS_ASSERTION_FAILURE.
-             * Prints the first few hits plus every 20000th, always (MESSAGE
-             * ignores WINEDEBUG), with the raise address and a stack trace. */
-            static LONG assert_hits;
+            /* DEBUG: who raises STATUS_ASSERTION_FAILURE, and how often?
+             * MESSAGE ignores WINEDEBUG. Full details only for the first 5 hits,
+             * plus a hits-per-second line at most every 5 seconds. The usual
+             * ERR line is printed for the first 5 hits only. */
+            static LONG assert_hits, window_hits;
+            static volatile LONGLONG window_start;
+            LARGE_INTEGER now, freq;
             LONG hit = InterlockedIncrement( &assert_hits );
+            LONGLONG start;
 
-            if (hit <= 5 || !(hit % 20000))
+            InterlockedIncrement( &window_hits );
+            NtQueryPerformanceCounter( &now, &freq );
+            start = window_start;
+            if (!start) InterlockedCompareExchange64( &window_start, now.QuadPart, 0 );
+            else if (now.QuadPart - start >= 5 * freq.QuadPart &&
+                     InterlockedCompareExchange64( &window_start, now.QuadPart, start ) == start)
+            {
+                LONG n = InterlockedExchange( &window_hits, 0 );
+                LONGLONG ms = (now.QuadPart - start) * 1000 / freq.QuadPart;
+                MESSAGE( "ASSERTDBG: rate: %ld hits in %lld ms (%lld/s), total %ld\n",
+                         (long)n, (long long)ms, (long long)(n * 1000 / ms), (long)hit );
+            }
+
+            if (hit <= 5)
             {
                 struct debugstr_pc_args dbg_params;
                 char dbg_buffer[256];
@@ -281,9 +298,9 @@ NTSTATUS WINAPI dispatch_exception( EXCEPTION_RECORD *rec, CONTEXT *context )
                     if (WINE_UNIX_CALL( unix_debugstr_pc, &dbg_params )) dbg_buffer[0] = 0;
                     MESSAGE( "ASSERTDBG:   #%02u %p %s\n", dbg_i, frames[dbg_i], dbg_buffer );
                 }
+                ERR( "assertion failure exception\n" );
             }
         }
-        ERR( "assertion failure exception\n" );
         break;
 
     default:
