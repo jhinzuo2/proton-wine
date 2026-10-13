@@ -304,37 +304,6 @@ HRESULT WINAPI DwmGetCompositionTimingInfo(HWND hwnd, DWM_TIMING_INFO *info)
     QueryPerformanceCounter(&qpc);
     info->qpcVBlank = (qpc.QuadPart / info->qpcRefreshPeriod) * info->qpcRefreshPeriod;
 
-    /* EXPERIMENT: report monotonically increasing refresh/frame counters as if
-     * every refresh were composed and displayed on time, instead of leaving
-     * them all at zero. */
-    info->cRefresh = qpc.QuadPart / info->qpcRefreshPeriod;
-    info->cDXRefresh = (UINT)info->cRefresh;
-    info->qpcCompose = info->qpcVBlank;
-    info->cFrame = info->cRefresh;
-    info->cDXPresent = (UINT)info->cRefresh;
-    info->cRefreshFrame = info->cRefresh;
-    info->cFrameSubmitted = info->cRefresh;
-    info->cDXPresentSubmitted = (UINT)info->cRefresh;
-    info->cFrameConfirmed = info->cRefresh;
-    info->cDXPresentConfirmed = (UINT)info->cRefresh;
-    info->cRefreshConfirmed = info->cRefresh;
-    info->cDXRefreshConfirmed = (UINT)info->cRefresh;
-    info->cFrameDisplayed = info->cRefresh;
-    info->qpcFrameDisplayed = info->qpcVBlank;
-    info->cRefreshFrameDisplayed = info->cRefresh;
-    info->cFrameComplete = info->cRefresh;
-    info->qpcFrameComplete = info->qpcVBlank;
-    info->cFramesDisplayed = info->cRefresh;
-    info->cFramesComplete = info->cRefresh;
-
-    {
-        /* DEBUG: how often is this called? */
-        static LONG calls;
-        LONG c = InterlockedIncrement( &calls );
-        if (c <= 3 || !(c % 1000)) MESSAGE( "DWMDBG: DwmGetCompositionTimingInfo call #%ld hwnd=%p freq=%d\n",
-                                            (long)c, hwnd, display_frequency );
-    }
-
     return S_OK;
 }
 
