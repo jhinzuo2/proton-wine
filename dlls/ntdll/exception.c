@@ -312,21 +312,6 @@ NTSTATUS WINAPI dispatch_exception( EXCEPTION_RECORD *rec, CONTEXT *context )
                         MESSAGE( "ASSERTDBG:   code[%+d] %p: %08lx\n", r, code + r, (unsigned long)code[r] );
                 }
 #endif
-#ifdef __aarch64__
-                {
-                    /* DEBUG: caller code around Lr, the out-pointer value and the stack frame at the trap */
-                    const ULONG *lr_code = (const ULONG *)context->Lr;
-                    const ULONG *out = (const ULONG *)context->X[0];
-                    const unsigned long long *sp_mem = (const unsigned long long *)context->Sp;
-                    int k;
-                    MESSAGE( "ASSERTDBG:   caller code around Lr=%p\n", (void *)context->Lr );
-                    for (k = -40; k <= 8; k++)
-                        MESSAGE( "ASSERTDBG:   lr[%+d] %p: %08lx\n", k, lr_code + k, (unsigned long)lr_code[k] );
-                    MESSAGE( "ASSERTDBG:   out X0=%p value=%08lx\n", (void *)out, (unsigned long)out[0] );
-                    for (k = 0; k < 16; k++)
-                        MESSAGE( "ASSERTDBG:   sp[%03x]=%016llx\n", k * 8, sp_mem[k] );
-                }
-#endif
                 ERR( "assertion failure exception\n" );
             }
         }
